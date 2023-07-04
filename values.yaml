@@ -15,4 +15,10 @@ volumes:
       path: /deleteme
   - name: empty
     path: /deleteme2
-    emptyDir: true 
+    emptyDir: true
+
+deployment:
+  annotations:
+    keel.sh/policy: force
+    keel.sh/pollSchedule: "@every 72h"
+    keel.sh/trigger: poll

@@ -10,6 +10,11 @@ metadata:
     {{- if .Values.gitSha }}
     gimlet.io/git-sha: {{ .Values.gitSha }}
     {{- end }}
+    {{- if .Values.deployment }}
+    {{- with (.Values.deployment.annotations | default dict) }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:

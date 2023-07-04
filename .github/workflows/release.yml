@@ -1,105 +1,105 @@
-name: Release
+# name: Release
 
-on:
-  push:
-    tags:
-      - 'v*'
+# on:
+#   push:
+#     tags:
+#       - 'v*'
 
-jobs:
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    steps:
-  
-    - name: Checkout main
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    
-    - name: Extract tag version
-      id: versioning
-      run: |
-        tag=${GITHUB_REF/refs\/tags\//}
-        tag=${tag#v}
-        echo ::set-output name=tag_version::$tag
+# jobs:
+#   release:
+#     name: Release
+#     runs-on: ubuntu-latest
+#     steps:
 
-    - name: Extract chart version
-      id: chart_version
-      run: |
-        CHART_VERSION=$(cat charts/onechart/Chart.yaml | grep ^version:)
-        CHART_VERSION=${CHART_VERSION#version: }
-        echo $CHART_VERSION
-        echo ::set-output name=chart_version::$CHART_VERSION
+#     - name: Checkout main
+#       uses: actions/checkout@v2
+#       with:
+#         fetch-depth: 0
 
-        CHART_VERSION=$(cat charts/cron-job/Chart.yaml | grep ^version:)
-        CHART_VERSION=${CHART_VERSION#version: }
-        echo $CHART_VERSION
-        echo ::set-output name=cron_job_chart_version::$CHART_VERSION
+#     - name: Extract tag version
+#       id: versioning
+#       run: |
+#         tag=${GITHUB_REF/refs\/tags\//}
+#         tag=${tag#v}
+#         echo ::set-output name=tag_version::$tag
 
-    - name: Ensure tag and chart version matches
-      run: |
-        echo "$TAG_VERSION"
-        echo "$CHART_VERSION"
-        echo "$CRON_JOB_CHART_VERSION"
-        if [ "$TAG_VERSION" != "$CHART_VERSION" ]
-        then
-            echo "Tag version does not match chart version"
-            exit 1
-        fi
-        if [ "$TAG_VERSION" != "$CRON_JOB_CHART_VERSION" ]
-                then
-                    echo "Tag version does not match cron-job chart version"
-                    exit 1
-                fi
-      env:
-        TAG_VERSION: ${{ steps.versioning.outputs.tag_version }}
-        CHART_VERSION: ${{ steps.chart_version.outputs.chart_version }}
-        CRON_JOB_CHART_VERSION: ${{ steps.chart_version.outputs.cron_job_chart_version }}
+#     - name: Extract chart version
+#       id: chart_version
+#       run: |
+#         CHART_VERSION=$(cat charts/onechart/Chart.yaml | grep ^version:)
+#         CHART_VERSION=${CHART_VERSION#version: }
+#         echo $CHART_VERSION
+#         echo ::set-output name=chart_version::$CHART_VERSION
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+#         CHART_VERSION=$(cat charts/cron-job/Chart.yaml | grep ^version:)
+#         CHART_VERSION=${CHART_VERSION#version: }
+#         echo $CHART_VERSION
+#         echo ::set-output name=cron_job_chart_version::$CHART_VERSION
 
-    - name: Publishing to the Helm repository
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "Github Action"
-        git checkout master
+#     - name: Ensure tag and chart version matches
+#       run: |
+#         echo "$TAG_VERSION"
+#         echo "$CHART_VERSION"
+#         echo "$CRON_JOB_CHART_VERSION"
+#         if [ "$TAG_VERSION" != "$CHART_VERSION" ]
+#         then
+#             echo "Tag version does not match chart version"
+#             exit 1
+#         fi
+#         if [ "$TAG_VERSION" != "$CRON_JOB_CHART_VERSION" ]
+#                 then
+#                     echo "Tag version does not match cron-job chart version"
+#                     exit 1
+#                 fi
+#       env:
+#         TAG_VERSION: ${{ steps.versioning.outputs.tag_version }}
+#         CHART_VERSION: ${{ steps.chart_version.outputs.chart_version }}
+#         CRON_JOB_CHART_VERSION: ${{ steps.chart_version.outputs.cron_job_chart_version }}
 
-        make package
+#     - name: Create Release
+#       id: create_release
+#       uses: actions/create-release@v1
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         tag_name: ${{ github.ref }}
+#         release_name: Release ${{ github.ref }}
+#         draft: false
+#         prerelease: false
 
-        git add .
-        git commit -m "Publishing $TAG_VERSION to the Helm repository"
-        git push origin master
-      env:
-        TAG_VERSION: ${{ steps.versioning.outputs.tag_version }}
+#     - name: Publishing to the Helm repository
+#       run: |
+#         git config --global user.email "action@github.com"
+#         git config --global user.name "Github Action"
+#         git checkout master
 
-    - name: Preparing the next release version
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "Github Action"
-        git checkout master
+#         make package
 
-        without_major_version=${CHART_VERSION#*.}
-        without_patch_version=${without_major_version%.*}
-        increased_minor_version=$(($without_patch_version + 1))
-        major_version=${CHART_VERSION%%.*}
-        increased_version="$major_version.$increased_minor_version.0"
-        echo "The new version will be $increased_version"
+#         git add .
+#         git commit -m "Publishing $TAG_VERSION to the Helm repository"
+#         git push origin master
+#       env:
+#         TAG_VERSION: ${{ steps.versioning.outputs.tag_version }}
 
-        sed -i "s/version: $CHART_VERSION/version: $increased_version/" charts/onechart/Chart.yaml
-        sed -i "s/version: $CHART_VERSION/version: $increased_version/" charts/cron-job/Chart.yaml
+#     - name: Preparing the next release version
+#       run: |
+#         git config --global user.email "action@github.com"
+#         git config --global user.name "Github Action"
+#         git checkout master
 
-        git status
-        git add .
-        git commit -m "The next release version will be $increased_version"
-        git push origin master
-      env:
-        CHART_VERSION: ${{ steps.chart_version.outputs.chart_version }}
+#         without_major_version=${CHART_VERSION#*.}
+#         without_patch_version=${without_major_version%.*}
+#         increased_minor_version=$(($without_patch_version + 1))
+#         major_version=${CHART_VERSION%%.*}
+#         increased_version="$major_version.$increased_minor_version.0"
+#         echo "The new version will be $increased_version"
+
+#         sed -i "s/version: $CHART_VERSION/version: $increased_version/" charts/onechart/Chart.yaml
+#         sed -i "s/version: $CHART_VERSION/version: $increased_version/" charts/cron-job/Chart.yaml
+
+#         git status
+#         git add .
+#         git commit -m "The next release version will be $increased_version"
+#         git push origin master
+#       env:
+#         CHART_VERSION: ${{ steps.chart_version.outputs.chart_version }}
